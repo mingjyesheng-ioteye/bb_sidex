@@ -135,7 +135,7 @@ class TauriGitResourceGroup implements ISCMResourceGroup {
 	readonly _onDidChangeResources = new Emitter<void>();
 	readonly onDidChangeResources: Event<void> = this._onDidChangeResources.event;
 
-	readonly hideWhenEmpty = true;
+	readonly hideWhenEmpty = false;
 	contextValue: string | undefined;
 	readonly multiDiffEditorEnableViewChanges = false;
 
@@ -291,10 +291,10 @@ class TauriGitSCMProvider extends Disposable implements ISCMProvider {
 			tooltip: `Branch: ${this._branch}`,
 		}], undefined);
 
-		this._actionButton.set(total > 0 ? {
+		this._actionButton.set({
 			command: { id: 'tauri-git.commit', title: '$(check) Commit' },
 			enabled: true,
-		} : undefined, undefined);
+		}, undefined);
 
 		this._onDidChangeResources.fire();
 	}
