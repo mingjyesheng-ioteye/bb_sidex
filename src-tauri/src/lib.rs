@@ -4,6 +4,7 @@ use commands::debug::DebugAdapterStore;
 use commands::doc::DocStore;
 use commands::ext_host::ExtHostProcess;
 use commands::index::IndexStore;
+use commands::logging::LoggerStore;
 use commands::process::ProcessStore;
 use commands::storage::StorageDb;
 use commands::tasks::TaskProcessStore;
@@ -176,6 +177,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Arc::new(TerminalStore::new()))
         .manage(Arc::new(ProcessStore::new()))
         .manage(Arc::new(DebugAdapterStore::new()))
@@ -183,6 +185,7 @@ pub fn run() {
         .manage(Arc::new(WatchStore::new()))
         .manage(Arc::new(IndexStore::new(true)))
         .manage(Arc::new(DocStore::new()))
+        .manage(Arc::new(LoggerStore::new()))
         .manage(ExtHostProcess::new())
         .setup(|app| {
             let app_data = app
@@ -305,6 +308,8 @@ pub fn run() {
             commands::close_window,
             commands::set_window_title,
             commands::get_monitors,
+            commands::save_window_state,
+            commands::restore_window_state,
             commands::get_os_info,
             commands::get_env,
             commands::get_all_env,
@@ -352,6 +357,16 @@ pub fn run() {
             commands::watch_update_patterns,
             commands::watch_list,
             commands::watch_is_active,
+            // Extensions
+            commands::install_extension,
+            commands::uninstall_extension,
+            commands::list_installed_extensions,
+            // Logging
+            commands::log_create_logger,
+            commands::log_write,
+            commands::log_set_level,
+            commands::log_flush,
+            commands::log_drop,
             // Index search
             commands::index_build,
             commands::index_search,

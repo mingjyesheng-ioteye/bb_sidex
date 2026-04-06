@@ -10,6 +10,7 @@ use walkdir::WalkDir;
 pub struct FileMatch {
     pub path: String,
     pub name: String,
+    pub score: i64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -79,6 +80,48 @@ fn should_skip(entry: &walkdir::DirEntry, include_hidden: bool) -> bool {
     false
 }
 
+fn fuzzy_score(pattern: &str, target: &str) -> Option<i64> {
+    if pattern.is_empty() {
+        return Some(0);
+    }
+    let pat: Vec<char> = pattern.chars().collect();
+    let tgt: Vec<char> = target.chars().collect();
+    let mut pi = 0;
+    let mut score: i64 = 0;
+    let mut prev_match = false;
+    let mut consecutive = 0i64;
+
+    for (ti, &tc) in tgt.iter().enumerate() {
+        if pi < pat.len() && tc.to_ascii_lowercase() == pat[pi].to_ascii_lowercase() {
+            score += 1;
+            if ti == 0 || !tgt[ti - 1].is_alphanumeric() {
+                score += 5; // word boundary
+            }
+            if tc == pat[pi] {
+                score += 1; // exact case
+            }
+            if prev_match {
+                consecutive += 1;
+                score += consecutive * 2;
+            } else {
+                consecutive = 0;
+            }
+            prev_match = true;
+            pi += 1;
+        } else {
+            prev_match = false;
+            consecutive = 0;
+        }
+    }
+
+    if pi == pat.len() {
+        let len_penalty = (tgt.len() as i64 - pat.len() as i64).min(20);
+        Some(score * 100 - len_penalty)
+    } else {
+        None
+    }
+}
+
 #[tauri::command]
 pub fn search_files(
     root: String,
@@ -96,8 +139,7 @@ pub fn search_files(
         .and_then(|v| if v.is_empty() { None } else { Some(build_globset(v)) })
         .flatten();
 
-    let pattern_lower = pattern.to_lowercase();
-    let results = Arc::new(Mutex::new(Vec::new()));
+    let mut scored: Vec<FileMatch> = Vec::new();
 
     for entry in WalkDir::new(&root)
         .follow_links(false)
@@ -113,10 +155,6 @@ pub fn search_files(
         let path = entry.path();
         let name = entry.file_name().to_string_lossy().to_string();
 
-        if !name.to_lowercase().contains(&pattern_lower) {
-            continue;
-        }
-
         if let Some(ref inc) = include_set {
             if !inc.is_match(path) {
                 continue;
@@ -128,17 +166,21 @@ pub fn search_files(
             }
         }
 
-        let mut r = results.lock().unwrap();
-        if r.len() >= max_results {
-            break;
-        }
-        r.push(FileMatch {
+        let score = match fuzzy_score(&pattern, &name) {
+            Some(s) => s,
+            None => continue,
+        };
+
+        scored.push(FileMatch {
             path: path.to_string_lossy().to_string(),
             name,
+            score,
         });
     }
 
-    Ok(Arc::try_unwrap(results).unwrap().into_inner().unwrap())
+    scored.sort_by(|a, b| b.score.cmp(&a.score));
+    scored.truncate(max_results);
+    Ok(scored)
 }
 
 #[tauri::command]

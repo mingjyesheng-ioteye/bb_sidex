@@ -103,7 +103,7 @@ async function boot() {
 			'workbench.startupEditor': 'welcomePage',
 			'workbench.enableExperiments': false,
 			'workbench.iconTheme': 'vs-seti',
-			'workbench.colorTheme': 'SideX Monochrome Dark',
+			'workbench.colorTheme': 'Default Dark Modern',
 			'editor.experimentalGpuAcceleration': 'auto',
 			'workbench.productIconTheme': 'Default',
 			'workbench.editor.showTabs': 'multiple',
@@ -175,11 +175,9 @@ async function boot() {
 
 	create(document.body, options);
 
-	// Override external URL opener to use Tauri's shell plugin
 	setupTauriExternalOpener();
-
-	// Wire up native menu actions to VSCode commands
 	setupMenuActions();
+	setupWindowStateRestore();
 
 	console.log('[SideX] Workbench created' + (folderParam ? ` (folder: ${folderParam})` : ' (no folder)'), 'workspace:', workspace);
 }
@@ -202,6 +200,25 @@ function setupTauriExternalOpener() {
 			}
 		};
 		document.addEventListener('click', handler, true);
+	}).catch(() => {});
+}
+
+function setupWindowStateRestore() {
+	import('@tauri-apps/api/core').then(({ invoke }) => {
+		invoke('restore_window_state', { label: 'main' }).catch(() => {});
+
+		let saveTimer: ReturnType<typeof setTimeout> | null = null;
+		const debouncedSave = () => {
+			if (saveTimer) { clearTimeout(saveTimer); }
+			saveTimer = setTimeout(() => {
+				invoke('save_window_state', { label: 'main' }).catch(() => {});
+			}, 500);
+		};
+
+		window.addEventListener('resize', debouncedSave);
+		window.addEventListener('beforeunload', () => {
+			invoke('save_window_state', { label: 'main' }).catch(() => {});
+		});
 	}).catch(() => {});
 }
 
