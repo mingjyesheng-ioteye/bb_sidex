@@ -321,6 +321,16 @@ function setupMenuActions() {
 			return;
 		}
 
+		if (menuId === 'find') {
+			const editorService = (window as any).__sidex_editorService;
+			if (editorService?.activeEditor?.typeId === 'workbench.editors.webviewInput') {
+				try {
+					await (window as any).__sidex_commandService?.executeCommand('editor.action.webvieweditor.showFind');
+				} catch { }
+				return;
+			}
+		}
+
 		const commandId = menuToCommand[menuId];
 		if (!commandId) {
 			console.warn(`[SideX] Unknown menu action: ${menuId}`);

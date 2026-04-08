@@ -39,6 +39,7 @@ import { isWorkspaceToOpen, isFolderToOpen } from '../../platform/window/common/
 import { getSingleFolderWorkspaceIdentifier, getWorkspaceIdentifier } from '../services/workspaces/browser/workspaces.js';
 import { InMemoryFileSystemProvider } from '../../platform/files/common/inMemoryFilesystemProvider.js';
 import { ICommandService } from '../../platform/commands/common/commands.js';
+import { IEditorService } from '../services/editor/common/editorService.js';
 import { IndexedDBFileSystemProvider } from '../../platform/files/browser/indexedDBFileSystemProvider.js';
 import { BrowserRequestService } from '../services/request/browser/requestService.js';
 import { IRequestService } from '../../platform/request/common/request.js';
@@ -148,6 +149,9 @@ export class BrowserMain extends Disposable {
 
 			// Expose command service for native menu integration
 			(globalThis as any).__sidex_commandService = commandService;
+
+			const editorService = accessor.get(IEditorService);
+			(globalThis as any).__sidex_editorService = editorService;
 
 			const lifecycleService = accessor.get(ILifecycleService);
 			const timerService = accessor.get(ITimerService);
